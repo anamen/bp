@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device/html, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mobile Drawing App</title>
     <style>
         body {
@@ -76,7 +76,15 @@
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
         <option value="element3">Element 3</option>
-        <!-- Add other elements as needed -->
+        <option value="element1">Element 4</option>
+        <option value="element2">Element 5</option>
+        <option value="element3">Element 6</option>
+        <option value="element1">Element 7</option>
+        <option value="element2">Element 8</option>
+        <option value="element3">Element 9</option>
+        <option value="element1">Element 10</option>
+        <option value="element2">Element 11</option>
+        <option value="element3">Element 12</option>
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -152,7 +160,6 @@
                     ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
                 };
                 img.onerror = () => {
-                    // If the image fails to load, draw a placeholder
                     ctx.fillStyle = "#FF0000";
                     ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
                     ctx.fillStyle = "#FFFFFF";
@@ -176,7 +183,6 @@
                 ctx.fillText(obj.text, obj.x, obj.y);
             }
             if (isResizing && obj === selectedObject) {
-                // Draw resizing handle for selected object
                 ctx.fillStyle = "red";
                 ctx.fillRect(
                     obj.x + obj.width - resizingHandleSize / 2,
@@ -200,10 +206,19 @@
 
             selectedObject = objects.find(
                 (obj) =>
-                    (obj.type === "image" || obj.type === "text") &&
-                    x > obj.x && x < obj.x + obj.width &&
-                    y > obj.y && y < obj.y + obj.height
+                    obj.type === "text" &&
+                    x > obj.x && x < obj.x + ctx.measureText(obj.text).width &&
+                    y > obj.y - obj.fontSize && y < obj.y
             );
+
+            if (!selectedObject) {
+                selectedObject = objects.find(
+                    (obj) =>
+                        obj.type === "image" &&
+                        x > obj.x && x < obj.x + obj.width &&
+                        y > obj.y && y < obj.y + obj.height
+                );
+            }
         }
     };
 
@@ -260,10 +275,9 @@
     document.getElementById("elementsDropdown").addEventListener("change", (e) => {
         const selectedElement = e.target.value;
         if (selectedElement) {
-            // Add the selected element as an image (or element placeholder) to the canvas
             const element = {
                 type: "image",
-                src: `${selectedElement}.png`, // Reference the image file
+                src: `${selectedElement}.png`,
                 x: 50,
                 y: 50,
                 width: 100,
@@ -286,7 +300,7 @@
             color,
             x: canvas.width / 2 - 50, // Center horizontally
             y: canvas.height / 2 - 50, // Center vertically
-            width: canvas.width - 100, // Text wrapping width
+            width: ctx.measureText(textInput).width,
         });
         redrawCanvas();
     });
