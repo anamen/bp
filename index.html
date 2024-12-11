@@ -337,15 +337,63 @@
 
     // Save Drawing Button
     document.getElementById("saveButton").addEventListener("click", () => {
-        const imageURL = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = imageURL;
-        a.download = "drawing.png";
-        a.click();
+    // Get the image data from the canvas
+    const imageData = canvas.toDataURL("image/png");
+
+    // Save the image on the user's device
+    const link = document.createElement('a');
+    link.href = imageData;
+    link.download = 'drawing.png';
+    link.click();
+
+    // Upload the image to Imgur
+    uploadImageToImgur(imageData);
+});
+
+// Function to upload the image to Imgur
+function uploadImageToImgur(imageData) {
+    // Convert the base64 image data to a Blob
+    const byteCharacters = atob(imageData.split(',')[1]);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+        const slice = byteCharacters.slice(offset, offset + 1024);
+        const byteNumbers = new Array(slice.length);
+
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+    }
+
+    const blob = new Blob(byteArrays, { type: 'image/png' });
+
+    // Create a FormData object
+    const formData = new FormData();
+    formData.append('image', blob);
+
+    // Replace 'YOUR_IMGUR_CLIENT_ID' with your actual Imgur Client ID
+    const clientId = 'fb39161e4c710c6'; 
+
+    fetch('https://api.imgur.com/3/image', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Client-ID ${clientId}`
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Image uploaded successfully:', data.data.link);
+            // Optionally, you can log the URL of the uploaded image here
+        } else {
+            console.error('Image upload failed:', data.data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading image:', error);
     });
-
-    background.onload = redrawCanvas;
-</script>
-
-</body>
-</html>
+}
