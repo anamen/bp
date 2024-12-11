@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device/html, initial-scale=1.0">
     <title>Mobile Drawing App</title>
     <style>
         body {
@@ -76,7 +76,7 @@
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
         <option value="element3">Element 3</option>
-        <!-- Additional options here -->
+        <!-- Add other elements as needed -->
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -151,6 +151,13 @@
                 img.onload = () => {
                     ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
                 };
+                img.onerror = () => {
+                    // If the image fails to load, draw a placeholder
+                    ctx.fillStyle = "#FF0000";
+                    ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillText("Element", obj.x + 10, obj.y + 30);
+                };
             } else if (obj.type === "brush") {
                 ctx.strokeStyle = obj.color;
                 ctx.lineWidth = obj.size;
@@ -164,7 +171,9 @@
                 });
                 ctx.stroke();
             } else if (obj.type === "text") {
-                wrapText(obj);
+                ctx.font = `${obj.fontSize}px Arial`;
+                ctx.fillStyle = obj.color;
+                ctx.fillText(obj.text, obj.x, obj.y);
             }
             if (isResizing && obj === selectedObject) {
                 // Draw resizing handle for selected object
@@ -179,33 +188,6 @@
         });
     };
 
-    const wrapText = (obj) => {
-        const words = obj.text.split(' ');
-        const maxWidth = canvas.width - 40; // Text wrapping width
-        const lineHeight = obj.fontSize * 1.2;
-        let line = '';
-        let x = obj.x;
-        let y = obj.y;
-
-        ctx.font = `${obj.fontSize}px Arial`;
-        ctx.fillStyle = obj.color;
-
-        for (let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            const testWidth = metrics.width;
-
-            if (testWidth > maxWidth && n > 0) {
-                ctx.fillText(line, x, y);
-                line = words[n] + ' ';
-                y += lineHeight;
-            } else {
-                line = testLine;
-            }
-        }
-        ctx.fillText(line, x, y);
-    };
-
     const handleStart = (e) => {
         e.preventDefault();
         const { x, y } = getEventPosition(e);
@@ -218,7 +200,7 @@
 
             selectedObject = objects.find(
                 (obj) =>
-                    obj.type === "text" &&
+                    (obj.type === "image" || obj.type === "text") &&
                     x > obj.x && x < obj.x + obj.width &&
                     y > obj.y && y < obj.y + obj.height
             );
