@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stela koja priča o životu Klaudije</title>
+    <title>Mobile Drawing App</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,6 +23,7 @@
         #canvas {
             border: 1px solid black;
             cursor: crosshair;
+            touch-action: none; /* Prevents touch scrolling on mobile */
         }
 
         #elements-container {
@@ -74,16 +75,7 @@
         <option value="">Select Element</option>
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
-        <option value="element3">Element 3</option>
-        <option value="element4">Element 4</option>
-        <option value="element5">Element 5</option>
-        <option value="element6">Element 6</option>
-        <option value="element7">Element 7</option>
-        <option value="element8">Element 8</option>
-        <option value="element9">Element 9</option>
-        <option value="element10">Element 10</option>
-        <option value="element11">Element 11</option>
-        <option value="element12">Element 12</option>
+        <!-- Add more elements if needed -->
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -235,6 +227,24 @@
     canvas.addEventListener("touchstart", handleStart, { passive: false });
     canvas.addEventListener("touchmove", handleMove, { passive: false });
     canvas.addEventListener("touchend", handleEnd, { passive: false });
+
+    document.getElementById("draw-toggle-btn").addEventListener("click", () => {
+        isDrawing = true;
+        isMoving = false;
+        isResizing = false;
+    });
+
+    document.getElementById("move-toggle-btn").addEventListener("click", () => {
+        isDrawing = false;
+        isMoving = true;
+        isResizing = false;
+    });
+
+    document.getElementById("resize-toggle-btn").addEventListener("click", () => {
+        isDrawing = false;
+        isMoving = false;
+        isResizing = true;
+    });
 
     document.getElementById("add-text-btn").addEventListener("click", () => {
         const textInput = document.getElementById("text-input").value;
