@@ -273,8 +273,8 @@
             const element = {
                 type: "image",
                 src: `${selectedElement}.png`,
-                x: canvas.width / 2 - 50,
-                y: canvas.height / 2 - 50,
+                x: canvas.width / 2 - 50, // Center horizontally
+                y: canvas.height / 2 - 50, // Center vertically
                 width: 100,
                 height: 100,
             };
@@ -292,9 +292,9 @@
             text: textInput,
             fontSize,
             color,
-            x: canvas.width / 2 - 50,
-            y: canvas.height / 2 - 50,
-            width: canvas.width - 100,
+            x: canvas.width / 2 - 50, // Center horizontally
+            y: canvas.height / 2 - 50, // Center vertically
+            width: canvas.width - 100, // Text wrapping width
         });
         redrawCanvas();
     });
