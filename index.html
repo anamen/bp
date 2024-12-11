@@ -2,218 +2,170 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Stela koja priča o životu Klaudije</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile-Friendly Drawing App</title>
     <style>
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
             display: flex;
+            flex-direction: column;
             height: 100vh;
-            margin: 0;
         }
 
         #canvas-container {
+            flex: 1;
             position: relative;
-            width: 600px;
-            height: 800px;
-            background-color: black;
-            background-size: cover;
-            background-repeat: no-repeat;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         #toolbar {
             display: flex;
-            flex-direction: column;
-            background-color: #2C3E50;
             padding: 10px;
-            width: 200px;
+            background: #333;
             color: white;
+            justify-content: space-around;
         }
 
-        #toolbar label,
-        #toolbar select,
-        #toolbar button,
-        #toolbar input,
-        #toolbar textarea {
-            margin-bottom: 10px;
+        button, select, input[type="color"] {
+            margin: 0 5px;
+            padding: 5px;
         }
 
-        button {
-            padding: 10px;
-            cursor: pointer;
-        }
-
-        #saveButton {
-            background-color: red;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-        }
-
-        canvas {
-            display: block;
+        .draggable {
+            position: absolute;
+            border: 1px dashed #000;
+            padding: 5px;
+            cursor: move;
         }
     </style>
 </head>
 <body>
+    <div id="toolbar">
+        <input type="color" id="colorPicker" value="#000000">
+        <select id="brushSize">
+            <option value="2">Thin</option>
+            <option value="5">Medium</option>
+            <option value="10">Thick</option>
+        </select>
+        <button id="enableDraw">Enable Drawing</button>
+        <button id="enableResize">Enable Resize</button>
+        <button id="enableMove">Enable Move</button>
+        <button id="undo">Undo</button>
+        <button id="clear">Clear</button>
+        <button id="save">Save</button>
+    </div>
+    <div id="canvas-container">
+        <canvas id="drawingCanvas"></canvas>
+    </div>
+    <script>
+        const canvasContainer = document.getElementById('canvas-container');
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const colorPicker = document.getElementById('colorPicker');
+        const brushSize = document.getElementById('brushSize');
+        const undoButton = document.getElementById('undo');
+        const clearButton = document.getElementById('clear');
+        const saveButton = document.getElementById('save');
+        const enableDrawButton = document.getElementById('enableDraw');
+        const enableResizeButton = document.getElementById('enableResize');
+        const enableMoveButton = document.getElementById('enableMove');
 
-<div id="canvas-container">
-    <canvas id="canvas" width="600" height="800"></canvas>
-</div>
+        let drawing = false;
+        let paths = [];
+        let currentPath = [];
+        let mode = 'draw'; // modes: 'draw', 'resize', 'move'
 
-<div id="toolbar">
-    <select id="elementsDropdown">
-        <option value="">Select Element</option>
-        <option value="element1">Element 1</option>
-        <option value="element2">Element 2</option>
-        <option value="element3">Element 3</option>
-    </select>
+        function resizeCanvas() {
+            canvas.width = canvasContainer.offsetWidth;
+            canvas.height = canvasContainer.offsetHeight;
+            redraw();
+        }
 
-    <label for="brushColor">Brush Color:</label>
-    <input type="color" id="brushColor" value="#000000">
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-    <label for="brushSize">Brush Size:</label>
-    <input type="number" id="brushSize" min="1" max="20" value="5">
+        function startDrawing(e) {
+            if (mode !== 'draw') return;
+            drawing = true;
+            currentPath = [];
+            addPoint(e);
+        }
 
-    <label for="text-input">Add Text:</label>
-    <textarea id="text-input" placeholder="Enter text"></textarea>
-    <button id="add-text-btn">Add Text</button>
+        function stopDrawing() {
+            if (!drawing || mode !== 'draw') return;
+            drawing = false;
+            paths.push({ color: colorPicker.value, size: brushSize.value, path: currentPath });
+        }
 
-    <label for="fontSize">Font Size:</label>
-    <input type="number" id="fontSize" value="20" min="10" max="50">
+        function draw(e) {
+            if (!drawing || mode !== 'draw') return;
+            addPoint(e);
+        }
 
-    <label for="textColor">Text Color:</label>
-    <input type="color" id="textColor" value="#000000">
+        function addPoint(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            currentPath.push({ x, y });
+            drawLine();
+        }
 
-    <button id="undo">Undo</button>
-    <button id="delete">Delete</button>
-    <button id="draw-toggle-btn">Enable Drawing</button>
-    <button id="resize-toggle-btn">Enable Resize</button>
-    <button id="move-toggle-btn">Enable Move</button>
-
-    <button id="saveButton">Save Drawing</button>
-</div>
-
-<script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const background = new Image();
-    background.src = "1.svg"; // Path to the background image
-
-    let objects = [];
-    let isDrawing = false;
-    let isResizing = false;
-    let isMoving = false;
-    let selectedObject = null;
-    let startX, startY;
-    let offsetX, offsetY;
-    let startWidth, startHeight;
-    let lastX, lastY; // For drawing
-    let currentStroke = []; // Store current brush stroke
-
-    const brushColorInput = document.getElementById("brushColor");
-    const brushSizeInput = document.getElementById("brushSize");
-    const textColorInput = document.getElementById("textColor");
-    const fontSizeInput = document.getElementById("fontSize");
-    const textInput = document.getElementById("text-input");
-    const dropdown = document.getElementById("elementsDropdown");
-    const undoButton = document.getElementById("undo");
-    const deleteButton = document.getElementById("delete");
-    const saveButton = document.getElementById("saveButton");
-    const moveToggleButton = document.getElementById("move-toggle-btn");
-    const resizeToggleButton = document.getElementById("resize-toggle-btn");
-    const drawToggleButton = document.getElementById("draw-toggle-btn");
-
-    background.onload = () => {
-        redrawCanvas();
-    };
-
-    const redrawCanvas = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
-        objects.forEach((obj) => {
-            if (obj.type === "image") {
-                const img = new Image();
-                img.src = obj.src;
-                img.onload = () => ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
-            } else if (obj.type === "text") {
-                ctx.font = `${obj.size}px Times New Roman`;
-                ctx.fillStyle = obj.color;
-                ctx.fillText(obj.text, obj.x, obj.y);
-            } else if (obj.type === "brush") {
-                ctx.strokeStyle = obj.color;
-                ctx.lineWidth = obj.size;
-                ctx.beginPath();
-                obj.points.forEach((point, index) => {
-                    if (index === 0) {
-                        ctx.moveTo(point.x, point.y);
-                    } else {
-                        ctx.lineTo(point.x, point.y);
-                    }
-                });
-                ctx.stroke();
+        function drawLine() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            redraw();
+            ctx.strokeStyle = colorPicker.value;
+            ctx.lineWidth = brushSize.value;
+            ctx.beginPath();
+            for (let i = 0; i < currentPath.length - 1; i++) {
+                const { x: x1, y: y1 } = currentPath[i];
+                const { x: x2, y: y2 } = currentPath[i + 1];
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
             }
-        });
-    };
-
-    dropdown.addEventListener("change", (e) => {
-        const value = e.target.value;
-        if (value) {
-            const imgPath = `${value}.png`;
-            const img = new Image();
-            img.onload = () => {
-                objects.push({
-                    type: "image",
-                    src: imgPath,
-                    x: canvas.width / 2,
-                    y: canvas.height / 2,
-                    width: 100,
-                    height: 100
-                });
-                redrawCanvas();
-            };
-            img.src = imgPath;
+            ctx.stroke();
         }
-    });
 
-    document.getElementById("add-text-btn").addEventListener("click", () => {
-        const text = textInput.value;
-        if (text) {
-            objects.push({
-                type: "text",
-                text: text,
-                x: canvas.width / 2,
-                y: canvas.height / 2,
-                color: textColorInput.value,
-                size: parseInt(fontSizeInput.value)
+        function redraw() {
+            paths.forEach(({ color, size, path }) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = size;
+                ctx.beginPath();
+                for (let i = 0; i < path.length - 1; i++) {
+                    const { x: x1, y: y1 } = path[i];
+                    const { x: x2, y: y2 } = path[i + 1];
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                }
+                ctx.stroke();
             });
-            redrawCanvas();
         }
-    });
 
-    undoButton.addEventListener("click", () => {
-        objects.pop();
-        redrawCanvas();
-    });
+        function handleDraggableElement(type, content) {
+            // Functionality for draggable elements to be implemented here
+            alert(`Currently in ${type} mode. Further interaction is needed.`);
+        }
 
-    deleteButton.addEventListener("click", () => {
-        objects = [];
-        redrawCanvas();
-    });
+        undoButton.addEventListener('click', () => {
+            paths.pop();
+            redraw();
+        });
 
-    saveButton.addEventListener("click", () => {
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace("T", "_").split(".")[0];
-        link.download = `Stela_FN_${timestamp}.png`;
-        link.click();
-    });
+        clearButton.addEventListener('click', () => {
+            paths = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
 
-    // Initialize Canvas
-    redrawCanvas();
-</script>
-
-</body>
-</html>
+        saveButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'drawing.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
