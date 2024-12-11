@@ -76,15 +76,6 @@
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
         <option value="element3">Element 3</option>
-        <option value="element4">Element 4</option>
-        <option value="element5">Element 5</option>
-        <option value="element6">Element 6</option>
-        <option value="element7">Element 7</option>
-        <option value="element8">Element 8</option>
-        <option value="element9">Element 9</option>
-        <option value="element10">Element 10</option>
-        <option value="element11">Element 11</option>
-        <option value="element12">Element 12</option>
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -127,9 +118,8 @@
     let isMoving = false;
     let selectedObject = null;
     let startX, startY;
-    let offsetX, offsetY;
-    let startWidth, startHeight;
     let currentStroke = [];
+    let resizingHandleSize = 10; // Resize handle size
 
     const brushColorInput = document.getElementById("brushColor");
     const brushSizeInput = document.getElementById("brushSize");
@@ -157,7 +147,7 @@
             if (obj.type === "image") {
                 const img = new Image();
                 img.src = obj.src;
-                img.onload = () => ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
+                ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
             } else if (obj.type === "brush") {
                 ctx.strokeStyle = obj.color;
                 ctx.lineWidth = obj.size;
@@ -175,21 +165,34 @@
                 ctx.fillStyle = obj.color;
                 ctx.fillText(obj.text, obj.x, obj.y);
             }
+            if (isResizing && obj === selectedObject) {
+                // Draw resizing handle for selected object
+                ctx.fillStyle = "red";
+                ctx.fillRect(
+                    obj.x + obj.width - resizingHandleSize / 2,
+                    obj.y + obj.height - resizingHandleSize / 2,
+                    resizingHandleSize,
+                    resizingHandleSize
+                );
+            }
         });
     };
 
     const handleStart = (e) => {
         e.preventDefault();
         const { x, y } = getEventPosition(e);
+
         if (isDrawing) {
             currentStroke = [{ x, y }];
         } else if (isMoving || isResizing) {
             startX = x;
             startY = y;
-            selectedObject = objects.find((obj) =>
-                obj.type === "image"
-                    ? x > obj.x && x < obj.x + obj.width && y > obj.y && y < obj.y + obj.height
-                    : false
+
+            selectedObject = objects.find(
+                (obj) =>
+                    obj.type === "image" &&
+                    x > obj.x && x < obj.x + obj.width &&
+                    y > obj.y && y < obj.y + obj.height
             );
         }
     };
@@ -197,6 +200,7 @@
     const handleMove = (e) => {
         e.preventDefault();
         const { x, y } = getEventPosition(e);
+
         if (isDrawing && currentStroke.length > 0) {
             currentStroke.push({ x, y });
             redrawCanvas();
@@ -214,6 +218,10 @@
             startX = x;
             startY = y;
             redrawCanvas();
+        } else if (selectedObject && isResizing) {
+            selectedObject.width = x - selectedObject.x;
+            selectedObject.height = y - selectedObject.y;
+            redrawCanvas();
         }
     };
 
@@ -230,6 +238,7 @@
         selectedObject = null;
     };
 
+    // Event Listeners for Canvas
     canvas.addEventListener("mousedown", handleStart);
     canvas.addEventListener("mousemove", handleMove);
     canvas.addEventListener("mouseup", handleEnd);
@@ -237,6 +246,52 @@
     canvas.addEventListener("touchmove", handleMove, { passive: false });
     canvas.addEventListener("touchend", handleEnd, { passive: false });
 
+    // Adding elements from dropdown
+    document.getElementById("elementsDropdown").addEventListener("change", (e) => {
+        const selectedElement = e.target.value;
+        if (selectedElement) {
+            // Add the selected element as an image (or element placeholder) to the canvas
+            const element = {
+                type: "image",
+                src: `${selectedElement}.png`, // Assuming images are named element1.png, element2.png, etc.
+                x: 100,
+                y: 100,
+                width: 100,
+                height: 100
+            };
+            objects.push(element);
+            redrawCanvas();
+        }
+    });
+
+    // Text adding
+    document.getElementById("add-text-btn").addEventListener("click", () => {
+        const textInput = document.getElementById("text-input").value;
+        const fontSize = parseInt(document.getElementById("fontSize").value, 10);
+        const color = document.getElementById("textColor").value;
+        objects.push({
+            type: "text",
+            text: textInput,
+            fontSize,
+            color,
+            x: 50,
+            y: 50,
+        });
+        redrawCanvas();
+    });
+
+    // Undo and delete functionality
+    document.getElementById("undo").addEventListener("click", () => {
+        objects.pop();
+        redrawCanvas();
+    });
+
+    document.getElementById("delete").addEventListener("click", () => {
+        objects = [];
+        redrawCanvas();
+    });
+
+    // Mode toggling
     document.getElementById("draw-toggle-btn").addEventListener("click", () => {
         isDrawing = true;
         isMoving = false;
@@ -253,51 +308,6 @@
         isDrawing = false;
         isMoving = false;
         isResizing = true;
-    });
-
-    document.getElementById("add-text-btn").addEventListener("click", () => {
-        const textInput = document.getElementById("text-input").value;
-        const fontSize = parseInt(document.getElementById("fontSize").value, 10);
-        const color = document.getElementById("textColor").value;
-        objects.push({
-            type: "text",
-            text: textInput,
-            fontSize,
-            color,
-            x: 50,
-            y: 50,
-        });
-        redrawCanvas();
-    });
-
-    dropdown.addEventListener("change", (e) => {
-    const value = e.target.value;
-    if (value) {
-        const imgPath = ${value}.png;
-        const img = new Image();
-        img.onload = () => {
-            objects.push({
-                type: "image",
-                src: imgPath,
-                x: canvas.width / 2,
-                y: canvas.height / 2,
-                width: 100,
-                height: 100
-            });
-            redrawCanvas();
-        };
-        img.src = imgPath;  // Ensure image is loaded before adding it
-    }
-   });
-
-    document.getElementById("undo").addEventListener("click", () => {
-        objects.pop();
-        redrawCanvas();
-    });
-
-    document.getElementById("delete").addEventListener("click", () => {
-        objects = [];
-        redrawCanvas();
     });
 
     background.onload = redrawCanvas;
