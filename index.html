@@ -243,6 +243,14 @@
             startX = x;
             startY = y;
             redrawCanvas();
+        } else if (selectedObject && isResizing) {
+            const dx = x - startX;
+            const dy = y - startY;
+            selectedObject.width += dx;
+            selectedObject.height += dy;
+            startX = x;
+            startY = y;
+            redrawCanvas();
         }
     };
 
