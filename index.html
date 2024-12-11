@@ -74,6 +74,16 @@
         <option value="">Select Element</option>
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
+        <option value="element3">Element 3</option>
+        <option value="element4">Element 4</option>
+        <option value="element5">Element 5</option>
+        <option value="element6">Element 6</option>
+        <option value="element7">Element 7</option>
+        <option value="element8">Element 8</option>
+        <option value="element9">Element 9</option>
+        <option value="element10">Element 10</option>
+        <option value="element11">Element 11</option>
+        <option value="element12">Element 12</option>
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -116,6 +126,8 @@
     let isMoving = false;
     let selectedObject = null;
     let startX, startY;
+    let offsetX, offsetY;
+    let startWidth, startHeight;
     let currentStroke = [];
 
     const brushColorInput = document.getElementById("brushColor");
