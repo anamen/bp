@@ -133,6 +133,11 @@
     const brushColorInput = document.getElementById("brushColor");
     const brushSizeInput = document.getElementById("brushSize");
 
+    // Ensure the background is loaded before drawing
+    background.onload = () => {
+        redrawCanvas();  // Redraw canvas once background is loaded
+    };
+
     const getEventPosition = (e) => {
         const rect = canvas.getBoundingClientRect();
         if (e.touches && e.touches.length > 0) {
@@ -151,7 +156,9 @@
 
     const redrawCanvas = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+        if (background.complete) {  // Check if background is loaded
+            ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+        }
         objects.forEach((obj) => {
             if (obj.type === "image") {
                 const img = new Image();
@@ -337,63 +344,66 @@
 
     // Save Drawing Button
     document.getElementById("saveButton").addEventListener("click", () => {
-    // Get the image data from the canvas
-    const imageData = canvas.toDataURL("image/png");
+        // Get the image data from the canvas
+        const imageData = canvas.toDataURL("image/png");
 
-    // Save the image on the user's device
-    const link = document.createElement('a');
-    link.href = imageData;
-    link.download = 'drawing.png';
-    link.click();
+        // Save the image on the user's device
+        const link = document.createElement('a');
+        link.href = imageData;
+        link.download = 'drawing.png';
+        link.click();
 
-    // Upload the image to Imgur
-    uploadImageToImgur(imageData);
-});
-
-// Function to upload the image to Imgur
-function uploadImageToImgur(imageData) {
-    // Convert the base64 image data to a Blob
-    const byteCharacters = atob(imageData.split(',')[1]);
-    const byteArrays = [];
-
-    for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
-        const slice = byteCharacters.slice(offset, offset + 1024);
-        const byteNumbers = new Array(slice.length);
-
-        for (let i = 0; i < slice.length; i++) {
-            byteNumbers[i] = slice.charCodeAt(i);
-        }
-
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
-    }
-
-    const blob = new Blob(byteArrays, { type: 'image/png' });
-
-    // Create a FormData object
-    const formData = new FormData();
-    formData.append('image', blob);
-
-    // Replace 'YOUR_IMGUR_CLIENT_ID' with your actual Imgur Client ID
-    const clientId = 'fb39161e4c710c6'; 
-
-    fetch('https://api.imgur.com/3/image', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Client-ID ${clientId}`
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('Image uploaded successfully:', data.data.link);
-            // Optionally, you can log the URL of the uploaded image here
-        } else {
-            console.error('Image upload failed:', data.data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error uploading image:', error);
+        // Upload the image to Imgur
+        uploadImageToImgur(imageData);
     });
-}
+
+    // Function to upload the image to Imgur
+    function uploadImageToImgur(imageData) {
+        // Convert the base64 image data to a Blob
+        const byteCharacters = atob(imageData.split(',')[1]);
+        const byteArrays = [];
+
+        for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+            const slice = byteCharacters.slice(offset, offset + 1024);
+            const byteNumbers = new Array(slice.length);
+
+            for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+            }
+
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+        }
+
+        const blob = new Blob(byteArrays, { type: 'image/png' });
+
+        // Create a FormData object
+        const formData = new FormData();
+        formData.append('image', blob);
+
+        // Replace 'YOUR_IMGUR_CLIENT_ID' with your actual Imgur Client ID
+        const clientId = 'fb39161e4c710c6'; 
+
+        fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Client-ID ${clientId}`
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Image uploaded successfully:', data.data.link);
+            } else {
+                console.error('Image upload failed:', data.data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading image:', error);
+        });
+    }
+</script>
+
+</body>
+</html>
