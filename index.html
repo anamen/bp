@@ -76,6 +76,15 @@
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
         <option value="element3">Element 3</option>
+        <option value="element1">Element 4</option>
+        <option value="element2">Element 5</option>
+        <option value="element3">Element 6</option>
+        <option value="element1">Element 7</option>
+        <option value="element2">Element 8</option>
+        <option value="element3">Element 9</option>
+        <option value="element1">Element 10</option>
+        <option value="element2">Element 11</option>
+        <option value="element3">Element 12</option>
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -187,6 +196,33 @@
         });
     };
 
+    const wrapText = (obj) => {
+        const words = obj.text.split(' ');
+        const maxWidth = canvas.width - 40; // Text wrapping width
+        const lineHeight = obj.fontSize * 1.2;
+        let line = '';
+        let x = obj.x;
+        let y = obj.y;
+
+        ctx.font = `${obj.fontSize}px Arial`;
+        ctx.fillStyle = obj.color;
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+
+            if (testWidth > maxWidth && n > 0) {
+                ctx.fillText(line, x, y);
+                line = words[n] + ' ';
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        ctx.fillText(line, x, y);
+    };
+
     const handleStart = (e) => {
         e.preventDefault();
         const { x, y } = getEventPosition(e);
@@ -283,8 +319,9 @@
             text: textInput,
             fontSize,
             color,
-            x: 50,
-            y: 50,
+            x: canvas.width / 2 - 50, // Center horizontally
+            y: canvas.height / 2 - 50, // Center vertically
+            width: canvas.width - 100, // Text wrapping width
         });
         redrawCanvas();
     });
