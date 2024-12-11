@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile Drawing App</title>
+    <title>Stela koja priča o životu Klaudije</title>
     <style>
         body {
             margin: 0;
@@ -56,6 +56,8 @@
         const canvas = document.getElementById('drawingCanvas');
         const ctx = canvas.getContext('2d');
         const controls = document.getElementById('controls');
+        const background = new Image();
+        background.src = "1.svg";
 
         let isDrawing = false;
         let currentMode = 'draw';
