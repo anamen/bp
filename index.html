@@ -76,7 +76,15 @@
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
         <option value="element3">Element 3</option>
-        <!-- Add more elements as needed -->
+        <option value="element1">Element 4</option>
+        <option value="element2">Element 5</option>
+        <option value="element3">Element 6</option>
+        <option value="element1">Element 7</option>
+        <option value="element2">Element 8</option>
+        <option value="element3">Element 9</option>
+        <option value="element1">Element 10</option>
+        <option value="element2">Element 11</option>
+        <option value="element3">Element 12</option>
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -111,7 +119,7 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const background = new Image();
-    background.src = "1.svg";  // Example background, replace with actual
+    background.src = "1.svg"; // Your background image
 
     let objects = [];
     let isDrawing = false;
@@ -151,6 +159,12 @@
                 img.onload = () => {
                     ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
                 };
+                img.onerror = () => {
+                    ctx.fillStyle = "#FF0000";
+                    ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillText("Element", obj.x + 10, obj.y + 30);
+                };
             } else if (obj.type === "brush") {
                 ctx.strokeStyle = obj.color;
                 ctx.lineWidth = obj.size;
@@ -168,23 +182,35 @@
                 ctx.fillStyle = obj.color;
                 ctx.fillText(obj.text, obj.x, obj.y);
             }
+            if (isResizing && obj === selectedObject) {
+                ctx.fillStyle = "red";
+                ctx.fillRect(
+                    obj.x + obj.width - resizingHandleSize / 2,
+                    obj.y + obj.height - resizingHandleSize / 2,
+                    resizingHandleSize,
+                    resizingHandleSize
+                );
+            }
         });
     };
 
     const handleStart = (e) => {
         e.preventDefault();
         const { x, y } = getEventPosition(e);
+
         if (isDrawing) {
             currentStroke = [{ x, y }];
         } else if (isMoving || isResizing) {
             startX = x;
             startY = y;
+
             selectedObject = objects.find(
                 (obj) =>
                     obj.type === "text" &&
                     x > obj.x && x < obj.x + ctx.measureText(obj.text).width &&
                     y > obj.y - obj.fontSize && y < obj.y
             );
+
             if (!selectedObject) {
                 selectedObject = objects.find(
                     (obj) =>
@@ -236,31 +262,6 @@
         }
         selectedObject = null;
     };
-
-    // Save Canvas as PNG (for user and provider)
-    document.getElementById("saveButton").addEventListener("click", () => {
-        const dataUrl = canvas.toDataURL("image/png");
-
-        // User's device save: Trigger download
-        const link = document.createElement("a");
-        link.href = dataUrl;
-        link.download = "drawing.png";
-        link.click();
-
-        // For provider (sending data to server or saving on provider's device)
-        // Uncomment the following to simulate saving for the provider (e.g., via API)
-        /*
-        fetch("/save-drawing", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ imageData: dataUrl }),
-        }).then(response => response.json())
-          .then(data => console.log("Saved on server:", data))
-          .catch(err => console.error("Error saving:", err));
-        */
-    });
 
     // Event Listeners for Canvas
     canvas.addEventListener("mousedown", handleStart);
@@ -332,6 +333,15 @@
         isDrawing = false;
         isMoving = false;
         isResizing = true;
+    });
+
+    // Save Drawing Button
+    document.getElementById("saveButton").addEventListener("click", () => {
+        const imageURL = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = imageURL;
+        a.download = "drawing.png";
+        a.click();
     });
 
     background.onload = redrawCanvas;
