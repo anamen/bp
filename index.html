@@ -3,169 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile-Friendly Drawing App</title>
+    <title>Mobile Drawing App</title>
     <style>
         body {
             margin: 0;
+            overflow: hidden;
             font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
         }
 
-        #canvas-container {
-            flex: 1;
-            position: relative;
+        #controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             background: #f0f0f0;
-            overflow: hidden;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        button, select, input {
+            padding: 5px;
+            font-size: 14px;
         }
 
         canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        #toolbar {
-            display: flex;
-            padding: 10px;
-            background: #333;
-            color: white;
-            justify-content: space-around;
-        }
-
-        button, select, input[type="color"] {
-            margin: 0 5px;
-            padding: 5px;
-        }
-
-        .draggable {
-            position: absolute;
-            border: 1px dashed #000;
-            padding: 5px;
-            cursor: move;
+            display: block;
+            touch-action: none;
         }
     </style>
 </head>
 <body>
-    <div id="toolbar">
-        <input type="color" id="colorPicker" value="#000000">
-        <select id="brushSize">
-            <option value="2">Thin</option>
-            <option value="5">Medium</option>
-            <option value="10">Thick</option>
-        </select>
-        <button id="enableDraw">Enable Drawing</button>
-        <button id="enableResize">Enable Resize</button>
-        <button id="enableMove">Enable Move</button>
-        <button id="undo">Undo</button>
-        <button id="clear">Clear</button>
-        <button id="save">Save</button>
+    <div id="controls">
+        <button onclick="toggleMode('draw')">Draw</button>
+        <button onclick="toggleMode('move')">Move</button>
+        <button onclick="toggleMode('resize')">Resize</button>
+        <button onclick="addText()">Add Text</button>
+        <button onclick="addShape()">Add Shape</button>
+        <button onclick="undo()">Undo</button>
+        <button onclick="clearCanvas()">Delete</button>
+        <button onclick="saveCanvas()">Save</button>
+        <label for="color">Color:</label>
+        <input type="color" id="color" value="#000000">
+        <label for="size">Brush Size:</label>
+        <input type="number" id="size" value="5" min="1" max="50">
     </div>
-    <div id="canvas-container">
-        <canvas id="drawingCanvas"></canvas>
-    </div>
+
+    <canvas id="drawingCanvas"></canvas>
+
     <script>
-        const canvasContainer = document.getElementById('canvas-container');
         const canvas = document.getElementById('drawingCanvas');
         const ctx = canvas.getContext('2d');
-        const colorPicker = document.getElementById('colorPicker');
-        const brushSize = document.getElementById('brushSize');
-        const undoButton = document.getElementById('undo');
-        const clearButton = document.getElementById('clear');
-        const saveButton = document.getElementById('save');
-        const enableDrawButton = document.getElementById('enableDraw');
-        const enableResizeButton = document.getElementById('enableResize');
-        const enableMoveButton = document.getElementById('enableMove');
+        const controls = document.getElementById('controls');
 
-        let drawing = false;
-        let paths = [];
-        let currentPath = [];
-        let mode = 'draw'; // modes: 'draw', 'resize', 'move'
+        let isDrawing = false;
+        let currentMode = 'draw';
+        let elements = [];
+        let undoStack = [];
+        let activeElement = null;
+        let offsetX, offsetY;
 
-        function resizeCanvas() {
-            canvas.width = canvasContainer.offsetWidth;
-            canvas.height = canvasContainer.offsetHeight;
-            redraw();
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function startDrawing(e) {
-            if (mode !== 'draw') return;
-            drawing = true;
-            currentPath = [];
-            addPoint(e);
-        }
-
-        function stopDrawing() {
-            if (!drawing || mode !== 'draw') return;
-            drawing = false;
-            paths.push({ color: colorPicker.value, size: brushSize.value, path: currentPath });
-        }
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - controls.offsetHeight;
+        canvas.style.background = '#eee';
 
         function draw(e) {
-            if (!drawing || mode !== 'draw') return;
-            addPoint(e);
-        }
+            if (!isDrawing || currentMode !== 'draw') return;
 
-        function addPoint(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-            currentPath.push({ x, y });
-            drawLine();
-        }
-
-        function drawLine() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            redraw();
-            ctx.strokeStyle = colorPicker.value;
-            ctx.lineWidth = brushSize.value;
-            ctx.beginPath();
-            for (let i = 0; i < currentPath.length - 1; i++) {
-                const { x: x1, y: y1 } = currentPath[i];
-                const { x: x2, y: y2 } = currentPath[i + 1];
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-            }
+            ctx.lineWidth = document.getElementById('size').value;
+            ctx.strokeStyle = document.getElementById('color').value;
+            ctx.lineCap = 'round';
+            ctx.lineTo(e.clientX, e.clientY - controls.offsetHeight);
             ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX, e.clientY - controls.offsetHeight);
         }
 
-        function redraw() {
-            paths.forEach(({ color, size, path }) => {
-                ctx.strokeStyle = color;
-                ctx.lineWidth = size;
-                ctx.beginPath();
-                for (let i = 0; i < path.length - 1; i++) {
-                    const { x: x1, y: y1 } = path[i];
-                    const { x: x2, y: y2 } = path[i + 1];
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                }
-                ctx.stroke();
-            });
+        function addText() {
+            const text = prompt('Enter text:');
+            if (text) {
+                const color = document.getElementById('color').value;
+                elements.push({ type: 'text', text, x: 50, y: 50, color, size: 20 });
+                redraw();
+            }
         }
 
-        function handleDraggableElement(type, content) {
-            // Functionality for draggable elements to be implemented here
-            alert(`Currently in ${type} mode. Further interaction is needed.`);
-        }
-
-        undoButton.addEventListener('click', () => {
-            paths.pop();
+        function addShape() {
+            if (elements.length >= 12) {
+                alert('You can only add up to 12 elements.');
+                return;
+            }
+            const color = document.getElementById('color').value;
+            elements.push({ type: 'shape', x: 100, y: 100, width: 100, height: 100, color });
             redraw();
-        });
+        }
 
-        clearButton.addEventListener('click', () => {
-            paths = [];
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        });
+        function toggleMode(mode) {
+            currentMode = mode;
+            if (mode === 'draw') {
+                canvas.style.cursor = 'crosshair';
+            } else {
+                canvas.style.cursor = 'default';
+                ctx.beginPath();
+            }
+        }
 
-        saveButton.addEventListener('click', () => {
+        function undo() {
+            if (elements.length > 0) {
+                undoStack.push(elements.pop());
+                redraw();
+            }
+        }
+
+        function clearCanvas() {
+            elements = [];
+            redraw();
+        }
+
+        function saveCanvas() {
             const link = document.createElement('a');
             link.download = 'drawing.png';
             link.href = canvas.toDataURL();
             link.click();
+        }
+
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#eee';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            elements.forEach(el => {
+                if (el.type === 'text') {
+                    ctx.font = `${el.size}px Arial`;
+                    ctx.fillStyle = el.color;
+                    ctx.fillText(el.text, el.x, el.y);
+                } else if (el.type === 'shape') {
+                    ctx.fillStyle = el.color;
+                    ctx.fillRect(el.x, el.y, el.width, el.height);
+                }
+            });
+        }
+
+        function handleMouseDown(e) {
+            const x = e.clientX;
+            const y = e.clientY - controls.offsetHeight;
+            activeElement = elements.find(el => {
+                if (el.type === 'shape') {
+                    return x > el.x && x < el.x + el.width && y > el.y && y < el.y + el.height;
+                } else if (el.type === 'text') {
+                    return x > el.x && x < el.x + el.text.length * el.size && y > el.y - el.size && y < el.y;
+                }
+                return false;
+            });
+            if (activeElement && currentMode !== 'draw') {
+                offsetX = x - activeElement.x;
+                offsetY = y - activeElement.y;
+            } else if (currentMode === 'draw') {
+                isDrawing = true;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (isDrawing && currentMode === 'draw') {
+                draw(e);
+            } else if (activeElement && currentMode === 'move') {
+                const x = e.clientX;
+                const y = e.clientY - controls.offsetHeight;
+                activeElement.x = x - offsetX;
+                activeElement.y = y - offsetY;
+                redraw();
+            } else if (activeElement && currentMode === 'resize') {
+                const x = e.clientX;
+                const y = e.clientY - controls.offsetHeight;
+                activeElement.width = Math.abs(x - activeElement.x);
+                activeElement.height = Math.abs(y - activeElement.y);
+                redraw();
+            }
+        }
+
+        function handleMouseUp() {
+            isDrawing = false;
+            activeElement = null;
+            ctx.beginPath();
+        }
+
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+
+        canvas.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
         });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+        });
+
+        canvas.addEventListener('touchend', handleMouseUp);
+    </script>
+</body>
+</html>
