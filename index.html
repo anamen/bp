@@ -76,15 +76,7 @@
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
         <option value="element3">Element 3</option>
-        <option value="element1">Element 4</option>
-        <option value="element2">Element 5</option>
-        <option value="element3">Element 6</option>
-        <option value="element1">Element 7</option>
-        <option value="element2">Element 8</option>
-        <option value="element3">Element 9</option>
-        <option value="element1">Element 10</option>
-        <option value="element2">Element 11</option>
-        <option value="element3">Element 12</option>
+        <!-- Additional options here -->
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -159,13 +151,6 @@
                 img.onload = () => {
                     ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
                 };
-                img.onerror = () => {
-                    // If the image fails to load, draw a placeholder
-                    ctx.fillStyle = "#FF0000";
-                    ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
-                    ctx.fillStyle = "#FFFFFF";
-                    ctx.fillText("Element", obj.x + 10, obj.y + 30);
-                };
             } else if (obj.type === "brush") {
                 ctx.strokeStyle = obj.color;
                 ctx.lineWidth = obj.size;
@@ -179,9 +164,7 @@
                 });
                 ctx.stroke();
             } else if (obj.type === "text") {
-                ctx.font = `${obj.fontSize}px Arial`;
-                ctx.fillStyle = obj.color;
-                ctx.fillText(obj.text, obj.x, obj.y);
+                wrapText(obj);
             }
             if (isResizing && obj === selectedObject) {
                 // Draw resizing handle for selected object
@@ -235,7 +218,7 @@
 
             selectedObject = objects.find(
                 (obj) =>
-                    obj.type === "image" &&
+                    obj.type === "text" &&
                     x > obj.x && x < obj.x + obj.width &&
                     y > obj.y && y < obj.y + obj.height
             );
