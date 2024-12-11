@@ -2,62 +2,129 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale: 1.0">
     <title>Stela koja priča o životu Klaudije</title>
     <style>
         body {
-            margin: 0;
-            overflow: hidden;
             font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            margin: 0;
         }
 
-        #controls {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: #f0f0f0;
-            padding: 10px;
+        #canvas-container {
+            position: relative;
+            flex-grow: 1;
+            background-color: black;
+            overflow: hidden;
+            cursor: grab;
+        }
+
+        #canvas {
+            border: 1px solid black;
+            cursor: crosshair;
+        }
+
+        #elements-container {
+            width: 300px;
+            background-color: #4CAF50;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            overflow-y: auto;
+        }
+
+        #undo-delete {
             display: flex;
             gap: 10px;
-            z-index: 10;
+            margin-bottom: 20px;
         }
 
-        button, select, input {
-            padding: 5px;
-            font-size: 14px;
+        button {
+            padding: 10px;
+            cursor: pointer;
         }
 
-        canvas {
-            display: block;
-            touch-action: none;
+        #saveButton {
+            background-color: red;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        #tools-container input,
+        #tools-container select,
+        #tools-container textarea {
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        #canvas-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
         }
     </style>
 </head>
 <body>
-    <div id="controls">
-        <button onclick="toggleMode('draw')">Draw</button>
-        <button onclick="toggleMode('move')">Move</button>
-        <button onclick="toggleMode('resize')">Resize</button>
-        <button onclick="addText()">Add Text</button>
-        <button onclick="addShape()">Add Shape</button>
-        <button onclick="undo()">Undo</button>
-        <button onclick="clearCanvas()">Delete</button>
-        <button onclick="saveCanvas()">Save</button>
-        <label for="color">Color:</label>
-        <input type="color" id="color" value="#000000">
-        <label for="size">Brush Size:</label>
-        <input type="number" id="size" value="5" min="1" max="50">
+
+<div id="canvas-container">
+    <canvas id="canvas" width="600" height="800"></canvas>
+</div>
+
+<div id="elements-container">
+    <select id="elementsDropdown">
+        <option value="">Select Element</option>
+        <option value="element1">Element 1</option>
+        <option value="element2">Element 2</option>
+        <option value="element3">Element 3</option>
+        <option value="element4">Element 4</option>
+        <option value="element5">Element 5</option>
+        <option value="element6">Element 6</option>
+        <option value="element7">Element 7</option>
+        <option value="element8">Element 8</option>
+        <option value="element9">Element 9</option>
+        <option value="element10">Element 10</option>
+        <option value="element11">Element 11</option>
+        <option value="element12">Element 12</option>
+    </select>
+
+    <label for="brushColor">Brush Color:</label>
+    <input type="color" id="brushColor" value="#000000">
+
+    <label for="brushSize">Brush Size:</label>
+    <input type="number" id="brushSize" min="1" max="20" value="5">
+
+    <label for="text-input">Add Text:</label>
+    <textarea id="text-input" placeholder="Enter text"></textarea>
+    <button id="add-text-btn">Add Text</button>
+
+    <label for="fontSize">Font Size:</label>
+    <input type="number" id="fontSize" value="20" min="10" max="50">
+
+    <label for="textColor">Text Color:</label>
+    <input type="color" id="textColor" value="#000000">
+
+    <div id="undo-delete">
+        <button id="undo">Undo</button>
+        <button id="delete">Delete</button>
     </div>
 
-    <canvas id="drawingCanvas"></canvas>
+    <button id="draw-toggle-btn">Enable Drawing</button>
+    <button id="resize-toggle-btn">Enable Resize</button>
+    <button id="move-toggle-btn">Enable Move</button>
 
-    <script>
-        const canvas = document.getElementById('drawingCanvas');
-        const ctx = canvas.getContext('2d');
-        const controls = document.getElementById('controls');
-        const background = new Image();
-        background.src = "1.svg";
+    <button id="saveButton">Save Drawing</button>
+</div>
+
+<script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const background = new Image();
+    background.src = "1.svg";
 
         let isDrawing = false;
         let currentMode = 'draw';
