@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale: 1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stela koja priča o životu Klaudije</title>
     <style>
         body {
@@ -61,12 +61,6 @@
             margin-bottom: 10px;
             width: 100%;
         }
-
-        #canvas-controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-        }
     </style>
 </head>
 <body>
@@ -80,16 +74,6 @@
         <option value="">Select Element</option>
         <option value="element1">Element 1</option>
         <option value="element2">Element 2</option>
-        <option value="element3">Element 3</option>
-        <option value="element4">Element 4</option>
-        <option value="element5">Element 5</option>
-        <option value="element6">Element 6</option>
-        <option value="element7">Element 7</option>
-        <option value="element8">Element 8</option>
-        <option value="element9">Element 9</option>
-        <option value="element10">Element 10</option>
-        <option value="element11">Element 11</option>
-        <option value="element12">Element 12</option>
     </select>
 
     <label for="brushColor">Brush Color:</label>
@@ -126,155 +110,147 @@
     const background = new Image();
     background.src = "1.svg";
 
-        let isDrawing = false;
-        let currentMode = 'draw';
-        let elements = [];
-        let undoStack = [];
-        let activeElement = null;
-        let offsetX, offsetY;
+    let objects = [];
+    let isDrawing = false;
+    let isResizing = false;
+    let isMoving = false;
+    let selectedObject = null;
+    let startX, startY;
+    let currentStroke = [];
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight - controls.offsetHeight;
-        canvas.style.background = '#eee';
+    const brushColorInput = document.getElementById("brushColor");
+    const brushSizeInput = document.getElementById("brushSize");
 
-        function draw(e) {
-            if (!isDrawing || currentMode !== 'draw') return;
+    const getEventPosition = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            const touch = e.touches[0];
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top,
+            };
+        } else {
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+            };
+        }
+    };
 
-            ctx.lineWidth = document.getElementById('size').value;
-            ctx.strokeStyle = document.getElementById('color').value;
-            ctx.lineCap = 'round';
-            ctx.lineTo(e.clientX, e.clientY - controls.offsetHeight);
+    const redrawCanvas = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+        objects.forEach((obj) => {
+            if (obj.type === "image") {
+                const img = new Image();
+                img.src = obj.src;
+                img.onload = () => ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
+            } else if (obj.type === "brush") {
+                ctx.strokeStyle = obj.color;
+                ctx.lineWidth = obj.size;
+                ctx.beginPath();
+                obj.points.forEach((point, index) => {
+                    if (index === 0) {
+                        ctx.moveTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                });
+                ctx.stroke();
+            } else if (obj.type === "text") {
+                ctx.font = `${obj.fontSize}px Arial`;
+                ctx.fillStyle = obj.color;
+                ctx.fillText(obj.text, obj.x, obj.y);
+            }
+        });
+    };
+
+    const handleStart = (e) => {
+        e.preventDefault();
+        const { x, y } = getEventPosition(e);
+        if (isDrawing) {
+            currentStroke = [{ x, y }];
+        } else if (isMoving || isResizing) {
+            startX = x;
+            startY = y;
+            selectedObject = objects.find((obj) =>
+                obj.type === "image"
+                    ? x > obj.x && x < obj.x + obj.width && y > obj.y && y < obj.y + obj.height
+                    : false
+            );
+        }
+    };
+
+    const handleMove = (e) => {
+        e.preventDefault();
+        const { x, y } = getEventPosition(e);
+        if (isDrawing && currentStroke.length > 0) {
+            currentStroke.push({ x, y });
+            redrawCanvas();
+            ctx.strokeStyle = brushColorInput.value;
+            ctx.lineWidth = parseInt(brushSizeInput.value, 10);
+            ctx.beginPath();
+            ctx.moveTo(currentStroke[currentStroke.length - 2].x, currentStroke[currentStroke.length - 2].y);
+            ctx.lineTo(x, y);
             ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(e.clientX, e.clientY - controls.offsetHeight);
+        } else if (selectedObject && isMoving) {
+            const dx = x - startX;
+            const dy = y - startY;
+            selectedObject.x += dx;
+            selectedObject.y += dy;
+            startX = x;
+            startY = y;
+            redrawCanvas();
         }
+    };
 
-        function addText() {
-            const text = prompt('Enter text:');
-            if (text) {
-                const color = document.getElementById('color').value;
-                elements.push({ type: 'text', text, x: 50, y: 50, color, size: 20 });
-                redraw();
-            }
-        }
-
-        function addShape() {
-            if (elements.length >= 12) {
-                alert('You can only add up to 12 elements.');
-                return;
-            }
-            const color = document.getElementById('color').value;
-            elements.push({ type: 'shape', x: 100, y: 100, width: 100, height: 100, color });
-            redraw();
-        }
-
-        function toggleMode(mode) {
-            currentMode = mode;
-            if (mode === 'draw') {
-                canvas.style.cursor = 'crosshair';
-            } else {
-                canvas.style.cursor = 'default';
-                ctx.beginPath();
-            }
-        }
-
-        function undo() {
-            if (elements.length > 0) {
-                undoStack.push(elements.pop());
-                redraw();
-            }
-        }
-
-        function clearCanvas() {
-            elements = [];
-            redraw();
-        }
-
-        function saveCanvas() {
-            const link = document.createElement('a');
-            link.download = 'drawing.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        }
-
-        function redraw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#eee';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            elements.forEach(el => {
-                if (el.type === 'text') {
-                    ctx.font = `${el.size}px Arial`;
-                    ctx.fillStyle = el.color;
-                    ctx.fillText(el.text, el.x, el.y);
-                } else if (el.type === 'shape') {
-                    ctx.fillStyle = el.color;
-                    ctx.fillRect(el.x, el.y, el.width, el.height);
-                }
+    const handleEnd = (e) => {
+        if (isDrawing && currentStroke.length > 0) {
+            objects.push({
+                type: "brush",
+                points: currentStroke,
+                color: brushColorInput.value,
+                size: parseInt(brushSizeInput.value, 10),
             });
+            currentStroke = [];
         }
+        selectedObject = null;
+    };
 
-        function handleMouseDown(e) {
-            const x = e.clientX;
-            const y = e.clientY - controls.offsetHeight;
-            activeElement = elements.find(el => {
-                if (el.type === 'shape') {
-                    return x > el.x && x < el.x + el.width && y > el.y && y < el.y + el.height;
-                } else if (el.type === 'text') {
-                    return x > el.x && x < el.x + el.text.length * el.size && y > el.y - el.size && y < el.y;
-                }
-                return false;
-            });
-            if (activeElement && currentMode !== 'draw') {
-                offsetX = x - activeElement.x;
-                offsetY = y - activeElement.y;
-            } else if (currentMode === 'draw') {
-                isDrawing = true;
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-            }
-        }
+    canvas.addEventListener("mousedown", handleStart);
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("mouseup", handleEnd);
+    canvas.addEventListener("touchstart", handleStart, { passive: false });
+    canvas.addEventListener("touchmove", handleMove, { passive: false });
+    canvas.addEventListener("touchend", handleEnd, { passive: false });
 
-        function handleMouseMove(e) {
-            if (isDrawing && currentMode === 'draw') {
-                draw(e);
-            } else if (activeElement && currentMode === 'move') {
-                const x = e.clientX;
-                const y = e.clientY - controls.offsetHeight;
-                activeElement.x = x - offsetX;
-                activeElement.y = y - offsetY;
-                redraw();
-            } else if (activeElement && currentMode === 'resize') {
-                const x = e.clientX;
-                const y = e.clientY - controls.offsetHeight;
-                activeElement.width = Math.abs(x - activeElement.x);
-                activeElement.height = Math.abs(y - activeElement.y);
-                redraw();
-            }
-        }
-
-        function handleMouseUp() {
-            isDrawing = false;
-            activeElement = null;
-            ctx.beginPath();
-        }
-
-        canvas.addEventListener('mousedown', handleMouseDown);
-        canvas.addEventListener('mousemove', handleMouseMove);
-        canvas.addEventListener('mouseup', handleMouseUp);
-
-        canvas.addEventListener('touchstart', (e) => {
-            const touch = e.touches[0];
-            handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
+    document.getElementById("add-text-btn").addEventListener("click", () => {
+        const textInput = document.getElementById("text-input").value;
+        const fontSize = parseInt(document.getElementById("fontSize").value, 10);
+        const color = document.getElementById("textColor").value;
+        objects.push({
+            type: "text",
+            text: textInput,
+            fontSize,
+            color,
+            x: 50,
+            y: 50,
         });
+        redrawCanvas();
+    });
 
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
-        });
+    document.getElementById("undo").addEventListener("click", () => {
+        objects.pop();
+        redrawCanvas();
+    });
 
-        canvas.addEventListener('touchend', handleMouseUp);
-    </script>
+    document.getElementById("delete").addEventListener("click", () => {
+        objects = [];
+        redrawCanvas();
+    });
+
+    background.onload = redrawCanvas;
+</script>
+
 </body>
 </html>
